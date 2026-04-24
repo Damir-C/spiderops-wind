@@ -1,0 +1,75 @@
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f172a;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'IBM Plex Mono',monospace}
+.bar{display:inline-flex;align-items:center;background:#1e293b;border:1px solid #1e3a5f;border-radius:8px;overflow:hidden}
+.seg{display:flex;align-items:center;gap:7px;padding:8px 13px}
+.sd{width:1px;height:40px;background:#1e3a5f}
+.lbl{font-size:9px;color:#94a3b8;letter-spacing:.12em;text-transform:uppercase;display:block;margin-bottom:2px}
+.wval{font-size:15px;font-weight:600;color:#e2e8f0}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.kval{font-size:13px;font-weight:600}
+.stn{font-size:11px;color:#475569}
+.groen .dot{background:#22c55e;box-shadow:0 0 6px #22c55e80}.groen .kval{color:#22c55e}
+.geel .dot{background:#eab308;box-shadow:0 0 6px #eab30880}.geel .kval{color:#eab308}
+.oranje .dot{background:#f97316;box-shadow:0 0 6px #f9731680}.oranje .kval{color:#f97316}
+.rood .dot{background:#ef4444;box-shadow:0 0 6px #ef444480}.rood .kval{color:#ef4444}
+#ndl{transform-origin:31px 31px;transition:transform .9s cubic-bezier(.34,1.56,.64,1)}
+</style>
+<div class="bar">
+  <div class="seg" style="padding:8px 10px;flex-direction:column;align-items:center;gap:2px">
+    <svg width="48" height="48" viewBox="0 0 62 62">
+      <circle cx="31" cy="31" r="30" fill="#0f172a" stroke="#1e3a5f" stroke-width="1.5"/>
+      <g stroke="#2d4a6b" stroke-width="1"><line x1="31" y1="3" x2="31" y2="9"/><line x1="31" y1="53" x2="31" y2="59"/><line x1="3" y1="31" x2="9" y2="31"/><line x1="53" y1="31" x2="59" y2="31"/></g>
+      <g stroke="#1e3a5f" stroke-width=".8"><line x1="31" y1="3" x2="31" y2="6" transform="rotate(45 31 31)"/><line x1="31" y1="3" x2="31" y2="6" transform="rotate(135 31 31)"/><line x1="31" y1="3" x2="31" y2="6" transform="rotate(225 31 31)"/><line x1="31" y1="3" x2="31" y2="6" transform="rotate(315 31 31)"/></g>
+      <text x="31" y="16" text-anchor="middle" fill="#60a5fa" font-family="IBM Plex Mono" font-size="7" font-weight="600">N</text>
+      <text x="31" y="51" text-anchor="middle" fill="#475569" font-family="IBM Plex Mono" font-size="7">Z</text>
+      <text x="50" y="33.5" text-anchor="middle" fill="#475569" font-family="IBM Plex Mono" font-size="7">O</text>
+      <text x="12" y="33.5" text-anchor="middle" fill="#475569" font-family="IBM Plex Mono" font-size="7">W</text>
+      <circle cx="31" cy="31" r="18" fill="none" stroke="#1e3a5f" stroke-width=".8" stroke-dasharray="2,4"/>
+      <g id="ndl">
+        <polygon points="31,10 34,31 31,28 28,31" fill="#fb923c"/>
+        <polygon points="31,52 34,31 31,34 28,31" fill="#1e3a5f"/>
+      </g>
+      <circle cx="31" cy="31" r="3" fill="#1e293b" stroke="#fb923c" stroke-width="1.2"/>
+    </svg>
+    <span style="font-size:8px;color:#475569;letter-spacing:.1em">RICHTING</span>
+  </div>
+  <div class="sd"></div>
+  <div class="seg"><span class="lbl">Wind</span><span class="wval" id="wd">--</span></div>
+  <div class="sd"></div>
+  <div class="seg"><div><span class="lbl">Temp</span><span class="wval" id="tp">--</span><span style="font-size:10px;color:#475569"> °C</span></div></div>
+  <div class="sd"></div>
+  <div class="seg groen" id="ks"><div class="dot"></div><div><span class="lbl">KNMI Zuid-Holland</span><span class="kval" id="kv">--</span></div></div>
+  <div class="sd"></div>
+  <div class="seg"><span class="lbl">Station</span><span class="stn">Meetstation Woensdrecht</span></div>
+</div>
+<script>
+const DD={N:180,NNO:202.5,NO:225,ONO:247.5,O:270,OZO:292.5,ZO:315,ZZO:337.5,Z:0,ZZW:22.5,ZW:45,WZW:67.5,W:90,WNW:112.5,NW:135,NNW:157.5,VAR:0,STIL:0};
+const SID=6340,PROV='Zuid-Holland';
+function norm(r){return r?r.toUpperCase().trim():'VAR';}
+function disp(r){const d=norm(r);return d.length>2?d.slice(0,2):d;}
+async function upd(){
+  try{
+    const r=await fetch('https://data.buienradar.nl/2.0/feed/json');
+    const d=await r.json();
+    const s=d.actual.stationmeasurements.find(x=>x.stationid===SID)||d.actual.stationmeasurements[0];
+    const raw=s.winddirection||'VAR';
+    document.getElementById('wd').textContent=disp(raw);
+    if(s.temperature!=null)document.getElementById('tp').textContent=s.temperature.toFixed(1);
+    const deg=DD[norm(raw)]??DD[norm(raw).slice(0,2)]??0;
+    document.getElementById('ndl').style.transform='rotate('+deg+'deg)';
+  }catch(e){}
+  try{
+    const r=await fetch('https://cdn.knmi.nl/knmi/map/current/weather/warning/waarschuwingen_nederland_centraal.json');
+    const d=await r.json();
+    let code='Code Groen';
+    if(d&&d.warnings){const w=d.warnings.find(x=>x.area&&x.area.toLowerCase().includes(PROV.toLowerCase().replace(/-/g,'')));if(w&&w.level)code=w.level;}
+    const seg=document.getElementById('ks');
+    document.getElementById('kv').textContent=code;
+    const l=code.toLowerCase();
+    seg.className='seg '+(l.includes('rood')?'rood':l.includes('oranje')?'oranje':l.includes('geel')?'geel':'groen');
+  }catch(e){document.getElementById('kv').textContent='Code Groen';}
+}
+upd();setInterval(upd,120000);
+</script>
